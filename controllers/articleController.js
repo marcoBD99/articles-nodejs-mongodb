@@ -38,7 +38,7 @@ var controller={
             var article = new ArticleModel();
             article.title=body.title;
             article.content=body.content;
-            article.image=null;
+            article.image=body.image;
             article.save()
                     .then(article => {
                         console.log("The article has been added.");
@@ -60,15 +60,21 @@ var controller={
     },
 
     getArticles: (req,res) => {
-        
-        ArticleModel.find({}).exec().then(articles => {
+        var query = ArticleModel.find({});
+        var last = req.params.last;
+
+        if (last || last!= undefined){
+            query.limit(5)
+        }
+
+        query.exec().then(articles => {
             console.log("Return article.");
             return res.status(200).send({status:'success',articles})
         })
         .catch(err => {
             return res.status(404).send({
                 status: 'error',
-                message:'error al retornar articulos'
+                message:'error al retornar articulos'+err
             });
         })  
     },
@@ -157,11 +163,9 @@ var controller={
         .catch(error =>{
             return res.status(500).send({
                 status: 'error',
-                message:'Error al eliminar'
+                message:'Error al eliminar'+error
             });
         })
-        .finally(() => {ArticleModel.db.close();}); 
-
     },
 
     uploadImage: (req,res) =>{
@@ -180,21 +184,27 @@ var controller={
                 });
             });
         }else{
-            ArticleModel.findOneAndUpdate({_id:articleId},{image:file_name},{new:true}).then(articleUpdate => {    
+            if (articleId){
+                ArticleModel.findOneAndUpdate({_id:articleId},{image:file_name},{new:true}).then(articleUpdate => {    
+                    return res.status(200).send({
+                        status:'success',
+                        message:'Se actualizo la imagen correctamente',
+                        articleUpdate
+                    });
+                })
+                .catch(err => {
+                    return res.status(500).send({
+                        status:'error',
+                        message:'Succedio un error al intentar actualizar la imagen del articulo',
+                        err
+                    });
+                })
+            }else{
                 return res.status(200).send({
                     status:'success',
-                    message:'Se actualizo la imagen correctamente',
-                    articleUpdate
+                    image:file_name
                 });
-            })
-            .catch(err => {
-                return res.status(500).send({
-                    status:'error',
-                    message:'Succedio un error al intentar actualizar la imagen del articulo',
-                    err
-                });
-            })
-
+            }
 
         }
     },
